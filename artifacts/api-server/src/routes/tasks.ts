@@ -71,6 +71,27 @@ router.get("/projects/:projectId/tasks", async (req, res): Promise<void> => {
   res.json(ListTasksResponse.parse(parsed));
 });
 
+router.post("/projects/:projectId/tasks/renumber", async (req, res): Promise<void> => {
+  const projectId = parseInt(req.params.projectId, 10);
+  if (isNaN(projectId)) {
+    res.status(400).json({ error: "Invalid projectId" });
+    return;
+  }
+  const allTasks = await db
+    .select({ id: tasksTable.id })
+    .from(tasksTable)
+    .where(eq(tasksTable.projectId, projectId))
+    .orderBy(asc(tasksTable.sortOrder), asc(tasksTable.id));
+
+  for (let i = 0; i < allTasks.length; i++) {
+    await db
+      .update(tasksTable)
+      .set({ taskNumber: i + 1 })
+      .where(eq(tasksTable.id, allTasks[i].id));
+  }
+  res.json({ renumbered: allTasks.length });
+});
+
 router.post("/projects/:projectId/tasks", async (req, res): Promise<void> => {
   const params = CreateTaskParams.safeParse(req.params);
   if (!params.success) {
@@ -137,6 +158,7 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
   if (parsed.data.status !== undefined) updates.status = parsed.data.status;
   if (parsed.data.notes !== undefined) updates.notes = parsed.data.notes;
   if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
+  if (parsed.data.taskNumber !== undefined) updates.taskNumber = parsed.data.taskNumber;
 
   const [task] = await db.update(tasksTable).set(updates).where(eq(tasksTable.id, params.data.id)).returning();
   if (!task) {
@@ -162,6 +184,16 @@ router.delete("/tasks/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Task not found" });
     return;
   }
+
+  const remaining = await db
+    .select({ id: tasksTable.id })
+    .from(tasksTable)
+    .where(eq(tasksTable.projectId, deleted.projectId))
+    .orderBy(asc(tasksTable.sortOrder), asc(tasksTable.id));
+  for (let i = 0; i < remaining.length; i++) {
+    await db.update(tasksTable).set({ taskNumber: i + 1 }).where(eq(tasksTable.id, remaining[i].id));
+  }
+
   res.sendStatus(204);
 });
 
