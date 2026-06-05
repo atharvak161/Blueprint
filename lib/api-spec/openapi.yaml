@@ -1,22 +1,25 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Project Management Tracker API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: projects
+  - name: phases
+  - name: tasks
+  - name: resources
+  - name: holidays
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +27,607 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Projects ────────────────────────────────────────────────────────────────
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /projects/{id}/summary:
+    get:
+      operationId: getProjectSummary
+      tags: [projects]
+      summary: KPI summary for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectSummary"
+        "404":
+          description: Not found
+
+  # ── Phases ──────────────────────────────────────────────────────────────────
+  /projects/{projectId}/phases:
+    get:
+      operationId: listPhases
+      tags: [phases]
+      summary: List phases for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Phase"
+    post:
+      operationId: createPhase
+      tags: [phases]
+      summary: Create a phase
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhaseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Phase"
+
+  /phases/{id}:
+    patch:
+      operationId: updatePhase
+      tags: [phases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhasePatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Phase"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePhase
+      tags: [phases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Tasks ───────────────────────────────────────────────────────────────────
+  /projects/{projectId}/tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List all tasks for a project (flat, ordered)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Resources ───────────────────────────────────────────────────────────────
+  /resources:
+    get:
+      operationId: listResources
+      tags: [resources]
+      summary: List all resources
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resource"
+    post:
+      operationId: createResource
+      tags: [resources]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+
+  /resources/{id}:
+    patch:
+      operationId: updateResource
+      tags: [resources]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourcePatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteResource
+      tags: [resources]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Holidays ─────────────────────────────────────────────────────────────────
+  /holidays:
+    get:
+      operationId: listHolidays
+      tags: [holidays]
+      summary: List all holidays
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Holiday"
+    post:
+      operationId: createHoliday
+      tags: [holidays]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HolidayInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Holiday"
+
+  /holidays/{id}:
+    delete:
+      operationId: deleteHoliday
+      tags: [holidays]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── Project ──────────────────────────────────────────────────────────────
+    Project:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:           { type: integer }
+        name:         { type: string }
+        description:  { type: ["string", "null"] }
+        startDate:    { type: ["string", "null"] }
+        endDate:      { type: ["string", "null"] }
+        createdAt:    { type: string }
+        updatedAt:    { type: string }
+
+    ProjectInput:
+      type: object
+      required: [name]
+      properties:
+        name:         { type: string, minLength: 1 }
+        description:  { type: string }
+        startDate:    { type: string }
+        endDate:      { type: string }
+
+    ProjectPatch:
+      type: object
+      properties:
+        name:         { type: string, minLength: 1 }
+        description:  { type: string }
+        startDate:    { type: string }
+        endDate:      { type: string }
+
+    ProjectSummary:
+      type: object
+      required: [projectId, totalTasks, completed, inProgress, notStarted, overdue, blocked, pctComplete, phaseStats]
+      properties:
+        projectId:    { type: integer }
+        totalTasks:   { type: integer }
+        completed:    { type: integer }
+        inProgress:   { type: integer }
+        notStarted:   { type: integer }
+        overdue:      { type: integer }
+        blocked:      { type: integer }
+        pctComplete:  { type: number }
+        phaseStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhaseStat"
+
+    PhaseStat:
+      type: object
+      required: [phaseId, phaseName, total, completed, pctComplete]
+      properties:
+        phaseId:      { type: integer }
+        phaseName:    { type: string }
+        total:        { type: integer }
+        completed:    { type: integer }
+        pctComplete:  { type: number }
+
+    # ── Phase ─────────────────────────────────────────────────────────────────
+    Phase:
+      type: object
+      required: [id, projectId, name, orderIndex, collapsed, createdAt]
+      properties:
+        id:           { type: integer }
+        projectId:    { type: integer }
+        name:         { type: string }
+        color:        { type: ["string", "null"] }
+        orderIndex:   { type: integer }
+        collapsed:    { type: boolean }
+        createdAt:    { type: string }
+
+    PhaseInput:
+      type: object
+      required: [name]
+      properties:
+        name:         { type: string, minLength: 1 }
+        color:        { type: string }
+        orderIndex:   { type: integer }
+
+    PhasePatch:
+      type: object
+      properties:
+        name:         { type: string, minLength: 1 }
+        color:        { type: string }
+        orderIndex:   { type: integer }
+        collapsed:    { type: boolean }
+
+    # ── Task ──────────────────────────────────────────────────────────────────
+    Task:
+      type: object
+      required: [id, projectId, phaseId, taskNumber, taskType, description, status, pctDone, sortOrder, createdAt, updatedAt]
+      properties:
+        id:             { type: integer }
+        projectId:      { type: integer }
+        phaseId:        { type: integer }
+        parentTaskId:   { type: ["integer", "null"] }
+        taskNumber:     { type: integer }
+        taskType:       { type: string }
+        description:    { type: string }
+        plannedStart:   { type: ["string", "null"] }
+        plannedEnd:     { type: ["string", "null"] }
+        resourceId:     { type: ["integer", "null"] }
+        resourceName:   { type: ["string", "null"] }
+        pctDone:        { type: number }
+        status:         { type: string }
+        notes:          { type: ["string", "null"] }
+        sortOrder:      { type: integer }
+        createdAt:      { type: string }
+        updatedAt:      { type: string }
+
+    TaskInput:
+      type: object
+      required: [phaseId, taskType, description]
+      properties:
+        phaseId:        { type: integer }
+        parentTaskId:   { type: integer }
+        taskType:       { type: string }
+        description:    { type: string, minLength: 1 }
+        plannedStart:   { type: string }
+        plannedEnd:     { type: string }
+        resourceId:     { type: integer }
+        pctDone:        { type: number }
+        status:         { type: string }
+        notes:          { type: string }
+        sortOrder:      { type: integer }
+
+    TaskPatch:
+      type: object
+      properties:
+        phaseId:        { type: integer }
+        parentTaskId:   { type: integer }
+        taskType:       { type: string }
+        description:    { type: string, minLength: 1 }
+        plannedStart:   { type: string }
+        plannedEnd:     { type: string }
+        resourceId:     { type: integer }
+        pctDone:        { type: number }
+        status:         { type: string }
+        notes:          { type: string }
+        sortOrder:      { type: integer }
+
+    # ── Resource ──────────────────────────────────────────────────────────────
+    Resource:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:           { type: integer }
+        name:         { type: string }
+        department:   { type: ["string", "null"] }
+        role:         { type: ["string", "null"] }
+        email:        { type: ["string", "null"] }
+        createdAt:    { type: string }
+
+    ResourceInput:
+      type: object
+      required: [name]
+      properties:
+        name:         { type: string, minLength: 1 }
+        department:   { type: string }
+        role:         { type: string }
+        email:        { type: string }
+
+    ResourcePatch:
+      type: object
+      properties:
+        name:         { type: string, minLength: 1 }
+        department:   { type: string }
+        role:         { type: string }
+        email:        { type: string }
+
+    # ── Holiday ───────────────────────────────────────────────────────────────
+    Holiday:
+      type: object
+      required: [id, name, startDate, endDate, createdAt]
+      properties:
+        id:           { type: integer }
+        name:         { type: string }
+        startDate:    { type: string }
+        endDate:      { type: string }
+        resourceId:   { type: ["integer", "null"] }
+        resourceName: { type: ["string", "null"] }
+        notes:        { type: ["string", "null"] }
+        createdAt:    { type: string }
+
+    HolidayInput:
+      type: object
+      required: [name, startDate, endDate]
+      properties:
+        name:         { type: string, minLength: 1 }
+        startDate:    { type: string }
+        endDate:      { type: string }
+        resourceId:   { type: integer }
+        notes:        { type: string }
