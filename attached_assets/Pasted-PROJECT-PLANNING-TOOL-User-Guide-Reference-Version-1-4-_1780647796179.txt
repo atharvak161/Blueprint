@@ -1,0 +1,184 @@
+PROJECT PLANNING TOOL
+User Guide & Reference
+Version 1.4  •  Excel Macro-Enabled Workbook (.xlsm)
+
+Overview
+This workbook is a macro-enabled project planning tool built in Excel. It allows your team to manage tasks, track dependencies, assign resources, monitor progress, and export a live interactive Gantt chart — all from a single file.
+
+Sheet	Purpose
+Project Plan	Main planning sheet. Contains the ProjectPlanTable with all tasks. This is where you do your day-to-day work.
+Resources	Lists team members with Name, Department, and Role. Add resources here before assigning them to tasks.
+Holidays	Holiday and leave calendar: Name, Start Date, End Date, Resource (blank = public holiday for everyone).
+Stakeholders	Email distribution list for EmailGantt: Name (A), Email (B), Type (C — To, CC, or BCC).
+
+Getting Started
+Follow these steps the first time you open the workbook, or after sharing it with a new team member.
+
+1.	Enable macros  when prompted by Excel. The tool will not function without them.
+2.	Add your team to the Resources sheet  before assigning anyone to tasks. Each row needs a Name, Department, and Role.
+3.	Add public holidays or leave to the Holidays sheet.  Leave the Resource column blank for public holidays that apply to everyone.
+4.	Run SetupProjectUI (Developer → Macros → SetupProjectUI → Run). Applies dropdowns and colour formatting. Run once per workbook or after adding new columns.
+5.	Start entering tasks  in the Project Plan sheet following the column guide below.
+
+💾	Save the workbook to its final shared or local folder before running Export Gantt. The HTML file is saved alongside the .xlsm file.
+
+Column Reference — Project Plan Sheet
+Every column in the ProjectPlanTable has a specific role. The table below explains each one.
+
+Column	Description
+ID	Unique numeric identifier. Auto-assigned and kept sequential. Do not edit manually — IDs renumber automatically when rows are inserted or deleted.
+Task Name	Name of the task or group header. Keep concise.
+Task Type	Header — group title row.  Task — a regular work item. Always set this first when adding a new row.
+Start Date	Click the cell to open the date input prompt (dd/mm/yyyy). Auto-calculated from predecessors when a Predecessor ID is set.
+End Date	Calculated automatically from Start Date + Duration. This field is protected — direct edits are blocked and reverted with a message.
+Duration	Working days the task will take. Header rows show total phase span automatically.
+Predecessor ID	ID(s) of tasks that must finish first. Comma-separate multiples (e.g. 3,4). Use + or − for lag/lead (e.g. 3+2 = 2 days after task 3 ends).
+Resource	Team member assigned. Must match a name in the Resources sheet exactly.
+Status	Dropdown: Complete, In Progress, Delayed, Not Started. Drives bar colours in the Gantt.
+% Complete	Progress 0–1 (e.g. 0.5 = 50%). Shown as a shaded fill inside the task bar on the Gantt.
+
+Row Management — Inserting & Deleting Tasks
+IDs are managed fully automatically. You do not need to manually renumber rows or update predecessor references when the plan changes.
+
+Inserting a row
+Right-click any row in the table and select Insert. The blank row is detected automatically, all IDs renumber sequentially, and any Predecessor IDs referencing shifted rows update to point to the correct tasks. The schedule recalculates immediately.
+
+Deleting a row
+Right-click the row and select Delete. On your next click anywhere on the sheet the ID gap is detected, all IDs renumber, predecessor references update, and the schedule recalculates.
+
+ℹ️	Predecessor IDs with lag notation (e.g. 3+2 or 5-1) are fully preserved during renumbering — only the ID reference updates, the lag value is unchanged.
+
+Task Groups & Header Rows
+Tasks can be organised into groups using Header rows. A Header row acts as a section title — its dates automatically span all the subtasks beneath it.
+
+How to create a group
+6.	Add a new row at the top of your group and set Task Type = Header.
+7.	Give the Header a clear name (e.g. Phase 1 — Discovery). Leave Start Date, End Date, Duration, and Predecessor ID blank.
+8.	Set Task Type = Task on all rows below it until the next Header row.
+9.	The Header row dates and duration update automatically once subtask dates are set.
+
+📊	Header rows are always visible in the Gantt even when filters are active. They appear as thin white spanning brackets showing the full group extent at a glance.
+
+The Duration shown on a Header row is the working-day span of the phase (earliest subtask start to latest subtask end), not the sum of individual task durations. This is the standard project management convention for phase duration.
+
+Dependencies & Date Scheduling
+The workbook automatically calculates Start and End Dates based on task dependencies, durations, and resource holidays. You should rarely need to type a date manually.
+
+Setting a start date
+Click any cell in the Start Date column. A date input prompt opens pre-filled with the current value. Enter a date in dd/mm/yyyy format. Invalid dates are rejected with a message, and the schedule updates immediately on confirmation.
+
+Setting a predecessor
+Enter the predecessor task ID in the Predecessor ID column. The task will start on the next working day after the predecessor ends. Comma-separate multiple predecessors (e.g. 3,4).
+
+Lag and lead time
+•	3+2 — starts 2 working days after task 3 ends (lag)
+•	3-1 — starts 1 working day before task 3 ends (lead/overlap)
+
+Holiday awareness
+The scheduling engine skips weekends and any dates in the Holidays sheet — both public holidays and individual resource leave. A 5-day task starting on a Thursday will correctly end the following Wednesday if there is a public holiday on Monday.
+
+💡	Dates cascade automatically. When you change a Predecessor ID, Duration, or Start Date, all dependent tasks recalculate immediately. You do not need to trigger anything manually.
+
+Status & Progress Tracking
+Use the Status dropdown and % Complete column to keep the plan current. These drive the visual appearance of bars in the Gantt.
+
+Status	Gantt bar colour
+Complete	Green
+In Progress	Gold / Amber
+Delayed	Red (pulsing glow animation)
+Not Started	Grey
+
+Set % Complete as a decimal: 0 = 0%, 0.25 = 25%, 0.5 = 50%, 1 = 100%. The progress fill in the Gantt bar updates on the next export.
+
+Interactive Gantt Chart
+Run ExportInteractiveGantt to generate a self-contained HTML file. Open it in any modern browser — no internet connection or plugins required. The file can be shared with stakeholders who don't have Excel.
+
+Network drive support
+The export works correctly whether the workbook is saved on a local drive or a shared network drive. The HTML file is written locally first then copied to the workbook folder, which avoids file-write errors that can occur when writing directly to a network path.
+
+Feature	Description
+Search	Type any text to filter tasks by name in real time.
+Resource filter	Show only tasks assigned to a specific team member.
+Department filter	Show only tasks from a particular department.
+Role filter	Show only tasks matching a specific role.
+Header bars	Thin white spanning brackets show the full extent of each group. Always visible regardless of filters.
+Status colours	Bar colours match the Status column. Delayed tasks pulse red. In Progress is gold. Complete is green.
+Progress fill	A semi-transparent fill inside each bar shows % Complete.
+Dependency arrows	Grey arrows connect predecessor tasks to dependents. Arrows redraw when filters change.
+Holiday shading	Blue-tinted pulsing cells mark public holidays and individual resource leave. Hover for details.
+Today line	A red vertical line marks today's date across the full chart.
+
+⚠	The Gantt is a snapshot — it does not live-update. Re-run ExportInteractiveGantt whenever you want a fresh version. Each export overwrites ProjectGantt.html in the same folder.
+
+Macro Reference
+All macros are accessible via the Developer tab → Macros, or by assigning them to buttons on the sheet.
+
+Macro	What it does
+SetupProjectUI	Run once after opening the workbook (or after adding columns). Applies dropdowns and conditional formatting to Task Type and Status columns.
+UpdateProjectSchedule	Runs automatically when you change Start Date, Duration, Predecessor ID, or Task Type. Can also be run manually to force a full recalculation. Safely restores Excel event handling even if an error occurs mid-run.
+RenumberIDs	Runs automatically when a row is inserted or deleted. Renumbers all IDs sequentially and remaps all Predecessor ID references. Never needs to be run manually.
+ExportInteractiveGantt	Generates ProjectGantt.html in the same folder as the workbook and opens it in your browser. Works on local and shared network drives.
+EmailGantt	Generates a fresh Gantt export, then opens a formatted Outlook draft with the project summary inline and ProjectGantt.html attached. Recipients are loaded from the Stakeholders sheet. Never sends automatically.
+
+Automatic Behaviours
+The following actions happen automatically without any user input.
+
+Trigger	What happens automatically
+Change Start Date, Duration, Predecessor ID, or Task Type	UpdateProjectSchedule runs and recalculates all affected dates.
+Click a Start Date cell	A date input prompt opens. Enter a date in dd/mm/yyyy format. Invalid dates are rejected.
+Attempt to edit End Date	The change is immediately undone. A message explains End Date is calculated and cannot be edited directly.
+Insert a row	Blank ID detected → RenumberIDs fires → all IDs renumber → predecessor references update → schedule recalculates.
+Delete a row	On next selection change: ID gap detected → RenumberIDs fires → all IDs renumber → predecessor references update → schedule recalculates.
+
+Emailing the Gantt
+The EmailGantt macro lets you send a project update to stakeholders in one click. It regenerates the Gantt, builds a dark-themed HTML email with a live project summary, attaches the interactive HTML, and opens it as an Outlook draft for review before sending.
+
+Setting up the Stakeholders sheet
+Create a sheet named exactly Stakeholders with row 1 as a header row and these three columns:
+
+Column	Description	Example
+A — Name	Display name (reference only, not used in the email).	Jane Smith
+B — Email	Full email address of the recipient.	jane@company.com
+C — Type	To, CC, or BCC. Defaults to To if left blank.	To / CC / BCC
+
+What the email contains
+•	Project header — project name, subtitle, and info items from columns C/D of the Project Plan sheet.
+•	Status summary — overall completion % with a progress bar, and individual counts per status.
+•	Attachment notice — a highlighted panel directing recipients to open ProjectGantt.html.
+•	Attached file — ProjectGantt.html, the self-contained interactive Gantt that opens in any browser.
+
+💡	The email is always opened as a draft — it never sends automatically. You can edit the subject, add a personal note, or adjust recipients in Outlook before hitting Send.
+
+Adding Macro Buttons to the Sheet
+You can add buttons directly to the Project Plan sheet for one-click macro access without opening the Developer tab.
+
+10.	Draw the shape — Insert → Shapes → Rounded Rectangle. Draw it in a convenient spot on the sheet.
+11.	Format the shape — Right-click → Format Shape. Fill: Solid Colour #1E3A5F (dark navy). Line: #3498DB (bright blue).
+12.	Add the label — Right-click → Edit Text. Type your label (e.g. Export Gantt). Set font to Segoe UI, size 11, Bold, White.
+13.	Assign the macro — Right-click → Assign Macro. Select the macro from the list and click OK.
+14.	Test it — Click the button. Ensure the workbook is saved first.
+
+💡	The button is part of the sheet, not the toolbar. When you share the .xlsm file the button comes with it — team members just need to enable macros.
+
+Tips & Troubleshooting
+
+Best practices
+•	Always set Task Type before filling in other columns on a new row.
+•	Never manually edit the ID column — IDs are managed automatically and will renumber on any insert or delete.
+•	Add resources to the Resources sheet before assigning them to tasks, otherwise Department and Role will show as N/A in the Gantt.
+•	Use the Holidays sheet for planned leave rather than manually adjusting dates — it keeps the schedule accurate when dates cascade.
+•	Save the workbook before exporting the Gantt.
+•	If the workbook is on a shared network drive, ensure you have write permission to that folder before exporting.
+
+Common issues
+Issue	Fix
+Macros are disabled	Click Enable Content in the yellow bar at the top of Excel when opening the file.
+Dates not updating	Run UpdateProjectSchedule manually from the Macros menu. Check that Predecessor IDs match existing IDs exactly.
+'Please save workbook first' message	Save the file (Ctrl+S) and then run ExportInteractiveGantt again.
+Export fails on a network drive	Check you have write permission to the workbook folder. If the network copy fails a local temp copy will open automatically so the export is not lost.
+Resource shows N/A in Gantt	The resource name in the task row doesn't match any entry in the Resources sheet. Check for typos or extra spaces.
+End Date reverts when edited	This is correct behaviour — End Date is a calculated field. Adjust Duration or Start Date to change when a task ends.
+IDs not renumbering after a delete	Click anywhere on the sheet after deleting — renumbering triggers on the next selection change, not on delete itself.
+Header row dates are wrong	Ensure all subtasks have valid Start and End dates. Run UpdateProjectSchedule to force a recalculation.
+
+Questions? Contact your project manager or the tool owner.
