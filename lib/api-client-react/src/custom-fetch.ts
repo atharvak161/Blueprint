@@ -17,6 +17,11 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _fetchOverride: ((input: RequestInfo | URL, options?: CustomFetchOptions) => Promise<unknown>) | null = null;
+
+export function setFetchOverride(fn: typeof _fetchOverride): void {
+  _fetchOverride = fn;
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -326,6 +331,7 @@ export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
 ): Promise<T> {
+  if (_fetchOverride) return _fetchOverride(input, options) as Promise<T>;
   input = applyBaseUrl(input);
   const { responseType = "auto", headers: headersInit, ...init } = options;
 
