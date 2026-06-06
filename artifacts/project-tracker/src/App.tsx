@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,6 +11,7 @@ import ProjectDetailPage from "@/pages/project-detail";
 import ResourcesPage from "@/pages/resources";
 import HolidaysPage from "@/pages/holidays";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { recordPath } from "@/lib/nav-history";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +27,17 @@ const queryClient = new QueryClient({
   },
 });
 
+// Records every in-app location change into the nav history stack.
+function LocationTracker() {
+  const [location] = useLocation();
+  useEffect(() => { recordPath(location); }, [location]);
+  return null;
+}
+
 function Router() {
   return (
     <AppLayout>
+      <LocationTracker />
       <Switch>
         <Route path="/" component={ProjectsPage} />
         <Route path="/projects" component={ProjectsPage} />

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
+import { goBack } from "@/lib/nav-history";
 import {
   ChevronDown, ChevronRight, Plus, Trash2, Pencil, Check, X,
   AlertCircle, Clock, TrendingUp, RefreshCw, ArrowLeft
@@ -953,6 +954,7 @@ function ProjectHeader({ project, projectId }: {
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string; section?: string }>();
+  const [, navigate] = useLocation();
   const projectId = parseInt(params.id, 10);
   const section = params.section ?? "plan";
   const queryClient = useQueryClient();
@@ -1022,7 +1024,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={() => window.history.back()} className="inline-flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors group" title="Go back">
+        <button onClick={() => goBack(navigate)} className="inline-flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors group" title="Go back">
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
         </button>
         <div className="flex items-center gap-1.5 text-sm">
