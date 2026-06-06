@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
-import { Plus, Trash2, FolderOpen, Calendar, ChevronRight } from "lucide-react";
+import { Plus, Trash2, FolderOpen, Calendar, ChevronRight, Download, Upload } from "lucide-react";
 import {
   useListProjects,
   useCreateProject,
@@ -56,12 +56,47 @@ interface ProjectFormData {
   endDate: string;
 }
 
+const EXPORT_KEYS = ['eph_projects', 'eph_phases', 'eph_tasks', 'eph_resources', 'eph_holidays', 'eph_ids'];
+
+function exportData() {
+  const data: Record<string, unknown> = { exportedAt: new Date().toISOString() };
+  EXPORT_KEYS.forEach(k => {
+    try { data[k] = JSON.parse(localStorage.getItem(k) || 'null'); } catch { data[k] = null; }
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `excel-project-hub-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(file: File, onDone: () => void) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target?.result as string);
+      EXPORT_KEYS.forEach(k => {
+        if (data[k] !== undefined && data[k] !== null) {
+          localStorage.setItem(k, JSON.stringify(data[k]));
+        }
+      });
+      onDone();
+    } catch {
+      alert('Invalid backup file — could not import data.');
+    }
+  };
+  reader.readAsText(file);
+}
+
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
   const { data: projects, isLoading } = useListProjects();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
   const [open, setOpen] = useState(false);
+  const importRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProjectFormData>({
     defaultValues: { name: "", description: "", startDate: "", endDate: "" },
@@ -96,7 +131,30 @@ export default function ProjectsPage() {
             {projects?.length ?? 0} project{projects?.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <div className="flex items-center gap-2">
+          <input
+            ref={importRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              importData(file, () => {
+                queryClient.invalidateQueries();
+                e.target.value = '';
+              });
+            }}
+          />
+          <Button variant="outline" size="sm" onClick={() => importRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportData}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-new-project">
               <Plus className="w-4 h-4 mr-2" />
@@ -158,6 +216,7 @@ export default function ProjectsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
