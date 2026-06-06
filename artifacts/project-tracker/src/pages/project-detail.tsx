@@ -1021,10 +1021,16 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <button onClick={() => window.history.back()} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group cursor-pointer">
-        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-        Back
-      </button>
+      <div className="flex items-center gap-2 mb-4">
+        <button onClick={() => window.history.back()} className="inline-flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors group" title="Go back">
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+        </button>
+        <div className="flex items-center gap-1.5 text-sm">
+          <Link href="/projects" className="text-muted-foreground hover:text-foreground transition-colors">Projects</Link>
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
+          <span className="text-foreground font-medium truncate max-w-xs">{project.name}</span>
+        </div>
+      </div>
       <div className="flex items-start gap-3 mb-6">
         <ProjectHeader project={project} projectId={projectId} />
         {(project.startDate || project.endDate) && (
