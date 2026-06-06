@@ -34,6 +34,11 @@ router.get("/holidays", async (_req, res): Promise<void> => {
   }))));
 });
 
+/**
+ * POST /api/holidays
+ * Required: name (string), startDate (YYYY-MM-DD), endDate (YYYY-MM-DD)
+ * Optional: resourceId (number), notes (string)
+ */
 router.post("/holidays", async (req, res): Promise<void> => {
   const parsed = CreateHolidayBody.safeParse(req.body);
   if (!parsed.success) {

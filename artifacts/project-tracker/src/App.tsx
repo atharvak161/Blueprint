@@ -12,7 +12,17 @@ import HolidaysPage from "@/pages/holidays";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
+  defaultOptions: {
+    queries: {
+      staleTime: 30000,
+      retry: 1,
+    },
+    mutations: {
+      onError: (error) => {
+        console.error('[QueryClient] Unhandled mutation error:', error);
+      },
+    },
+  },
 });
 
 function Router() {

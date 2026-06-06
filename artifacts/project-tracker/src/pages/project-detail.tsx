@@ -72,13 +72,18 @@ function InlineDescEdit({ value, onSave, className = "" }: {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
   useEffect(() => { setVal(value); }, [value]);
 
   function save() {
     const trimmed = val.trim();
-    if (trimmed && trimmed !== value) onSave(trimmed);
+    if (!trimmed) {
+      toast({ title: "Description cannot be empty", variant: "destructive" });
+      return;
+    }
+    if (trimmed !== value) onSave(trimmed);
     setEditing(false);
   }
 
@@ -330,7 +335,7 @@ function PhaseSection({ phase, tasks, projectId, resources, onAddTask, onEditTas
             />
           </div>
         ) : (
-          <span className="font-semibold text-sm flex-1 flex items-center gap-2 cursor-pointer" onClick={toggleCollapse}>
+          <span className="font-semibold text-sm flex-1 flex items-center gap-2 cursor-pointer" onClick={(e) => { e.stopPropagation(); setEditingName(true); }}>
             {phase.name}
             <span className="text-xs text-muted-foreground font-normal">{completed}/{total} tasks</span>
           </span>
@@ -420,6 +425,11 @@ function PhaseSection({ phase, tasks, projectId, resources, onAddTask, onEditTas
 
 // ─── Gantt View ────────────────────────────────────────────────────────────────
 
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function GanttView({ tasks, phases }: { tasks: Task[]; phases: { id: number; name: string; color?: string | null }[] }) {
   const withDates = tasks.filter((t) => t.plannedStart && t.plannedEnd);
   if (withDates.length === 0) {
@@ -431,7 +441,7 @@ function GanttView({ tasks, phases }: { tasks: Task[]; phases: { id: number; nam
     );
   }
 
-  const allDates = withDates.flatMap((t) => [new Date(t.plannedStart!).getTime(), new Date(t.plannedEnd!).getTime()]);
+  const allDates = withDates.flatMap((t) => [parseLocalDate(t.plannedStart!).getTime(), parseLocalDate(t.plannedEnd!).getTime()]);
   const minDate = Math.min(...allDates);
   const maxDate = Math.max(...allDates);
   const totalMs = maxDate - minDate || 1;
@@ -470,8 +480,8 @@ function GanttView({ tasks, phases }: { tasks: Task[]; phases: { id: number; nam
                 {phase.name}
               </div>
               {phaseTasks.map((task) => {
-                const start = new Date(task.plannedStart!).getTime();
-                const end = new Date(task.plannedEnd!).getTime();
+                const start = parseLocalDate(task.plannedStart!).getTime();
+                const end = parseLocalDate(task.plannedEnd!).getTime();
                 const left = ((start - minDate) / totalMs) * 100;
                 const width = Math.max(((end - start) / totalMs) * 100, 0.5);
                 const color = STATUS_CHART_COLORS[task.status as keyof typeof STATUS_CHART_COLORS] || STATUS_CHART_COLORS["Not Started"];
@@ -515,7 +525,14 @@ function GanttView({ tasks, phases }: { tasks: Task[]; phases: { id: number; nam
 function DashboardView({ projectId }: { projectId: number }) {
   const { data: summary, isLoading } = useGetProjectSummary(projectId, { query: { enabled: true, queryKey: getGetProjectSummaryQueryKey(projectId) } });
   if (isLoading) return <div className="space-y-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-40 w-full" /></div>;
-  if (!summary) return null;
+  if (!summary) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-sm gap-2">
+        <AlertCircle className="w-8 h-8 opacity-20" />
+        <span>No summary data available yet.</span>
+      </div>
+    );
+  }
 
   const kpis = [
     { label: "Total Tasks",  value: summary.totalTasks,  color: "text-foreground",       bg: "bg-card" },
