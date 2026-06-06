@@ -7,6 +7,7 @@ import {
   useDeleteProject,
   useGetProjectSummary,
   getListProjectsQueryKey,
+  getGetProjectSummaryQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCompactDate } from "@/lib/constants";
 
 function ProjectKPIBadges({ projectId }: { projectId: number }) {
-  const { data: summary } = useGetProjectSummary(projectId, { query: { enabled: true } });
+  const { data: summary } = useGetProjectSummary(projectId, { query: { enabled: true, queryKey: getGetProjectSummaryQueryKey(projectId) } });
   if (!summary) return null;
   return (
     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">

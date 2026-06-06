@@ -35,12 +35,13 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge, STATUS_CHART_COLORS, formatCompactDate } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
 
 const STATUSES = ["Not Started", "In Progress", "Completed", "Overdue", "Blocked"] as const;
 const PHASE_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#14b8a6", "#f97316", "#84cc16", "#06b6d4", "#a78bfa"];
 
 type Task = {
-  id: number; projectId: number; phaseId: number; parentTaskId: number | null;
+  id: number; projectId: number; phaseId: number; parentTaskId?: number | null;
   taskNumber: number; taskType: string; description: string;
   plannedStart?: string | null; plannedEnd?: string | null;
   resourceId?: number | null; resourceName?: string | null;
@@ -51,10 +52,14 @@ type Task = {
 interface TaskFormData {
   description: string; taskType: string; plannedStart: string; plannedEnd: string;
   resourceId: string; pctDone: string; status: string; notes: string;
+  phaseId: string;
 }
 
-async function renumberTasks(projectId: number) {
-  await fetch(`/api/projects/${projectId}/tasks/renumber`, { method: "POST" });
+async function renumberTasks(projectId: number): Promise<void> {
+  const res = await fetch(`/api/projects/${projectId}/tasks/renumber`, { method: "POST" });
+  if (!res.ok) {
+    throw new Error(`Renumber failed: ${res.status}`);
+  }
 }
 
 // ─── Inline Description Edit ──────────────────────────────────────────────────
@@ -112,13 +117,17 @@ function InlineDescEdit({ value, onSave, className = "" }: {
 function InlineStatusSelect({ task, projectId }: { task: Task; projectId: number }) {
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   return (
     <Select
       value={task.status}
       onValueChange={(val) =>
         updateTask.mutate(
           { id: task.id, data: { status: val } },
-          { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListTasksQueryKey(projectId) }); queryClient.invalidateQueries({ queryKey: getGetProjectSummaryQueryKey(projectId) }); } }
+          {
+            onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListTasksQueryKey(projectId) }); queryClient.invalidateQueries({ queryKey: getGetProjectSummaryQueryKey(projectId) }); },
+            onError: () => { toast({ title: "Failed to update status", variant: "destructive" }); },
+          }
         )
       }
     >
@@ -143,12 +152,16 @@ function InlinePctEdit({ task, projectId }: { task: Task; projectId: number }) {
   const [val, setVal] = useState(String(Math.round(task.pctDone)));
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   function save() {
     const n = Math.min(100, Math.max(0, parseInt(val) || 0));
     updateTask.mutate(
       { id: task.id, data: { pctDone: n } },
-      { onSuccess: () => { setEditing(false); queryClient.invalidateQueries({ queryKey: getListTasksQueryKey(projectId) }); queryClient.invalidateQueries({ queryKey: getGetProjectSummaryQueryKey(projectId) }); } }
+      {
+        onSuccess: () => { setEditing(false); queryClient.invalidateQueries({ queryKey: getListTasksQueryKey(projectId) }); queryClient.invalidateQueries({ queryKey: getGetProjectSummaryQueryKey(projectId) }); },
+        onError: () => { setEditing(false); toast({ title: "Failed to update progress", variant: "destructive" }); },
+      }
     );
   }
 
@@ -177,6 +190,7 @@ function TaskRow({ task, depth, projectId, resources, onEdit }: {
   const deleteTask = useDeleteTask();
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getListTasksQueryKey(projectId) });
@@ -184,7 +198,13 @@ function TaskRow({ task, depth, projectId, resources, onEdit }: {
   }, [queryClient, projectId]);
 
   function handleDescSave(val: string) {
-    updateTask.mutate({ id: task.id, data: { description: val } }, { onSuccess: invalidate });
+    updateTask.mutate(
+      { id: task.id, data: { description: val } },
+      {
+        onSuccess: invalidate,
+        onError: () => { toast({ title: "Failed to save description", variant: "destructive" }); },
+      }
+    );
   }
 
   return (
@@ -224,7 +244,17 @@ function TaskRow({ task, depth, projectId, resources, onEdit }: {
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground"
-                  onClick={() => deleteTask.mutate({ id: task.id }, { onSuccess: async () => { await renumberTasks(projectId); invalidate(); } })}
+                  onClick={() => deleteTask.mutate({ id: task.id }, {
+                    onSuccess: async () => {
+                      try {
+                        await renumberTasks(projectId);
+                      } catch {
+                        toast({ title: "Task deleted but renumbering failed — refresh to see correct numbers", variant: "destructive" });
+                      }
+                      invalidate();
+                    },
+                    onError: () => { toast({ title: "Failed to delete task", variant: "destructive" }); },
+                  })}
                 >
                   Delete
                 </AlertDialogAction>
@@ -249,6 +279,7 @@ function PhaseSection({ phase, tasks, projectId, resources, onAddTask, onEditTas
   const updatePhase = useUpdatePhase();
   const deletePhase = useDeletePhase();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(phase.name);
 
@@ -259,7 +290,10 @@ function PhaseSection({ phase, tasks, projectId, resources, onAddTask, onEditTas
   function toggleCollapse() {
     updatePhase.mutate(
       { id: phase.id, data: { collapsed: !phase.collapsed } },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPhasesQueryKey(projectId) }) }
+      {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPhasesQueryKey(projectId) }),
+        onError: () => { toast({ title: "Failed to update phase", variant: "destructive" }); },
+      }
     );
   }
 
@@ -267,7 +301,10 @@ function PhaseSection({ phase, tasks, projectId, resources, onAddTask, onEditTas
     if (!nameVal.trim() || nameVal === phase.name) { setEditingName(false); return; }
     updatePhase.mutate(
       { id: phase.id, data: { name: nameVal.trim() } },
-      { onSuccess: () => { setEditingName(false); queryClient.invalidateQueries({ queryKey: getListPhasesQueryKey(projectId) }); } }
+      {
+        onSuccess: () => { setEditingName(false); queryClient.invalidateQueries({ queryKey: getListPhasesQueryKey(projectId) }); },
+        onError: () => { toast({ title: "Failed to rename phase", variant: "destructive" }); },
+      }
     );
   }
 
@@ -318,7 +355,10 @@ function PhaseSection({ phase, tasks, projectId, resources, onAddTask, onEditTas
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground"
-                  onClick={() => deletePhase.mutate({ id: phase.id }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListPhasesQueryKey(projectId) }); queryClient.invalidateQueries({ queryKey: getListTasksQueryKey(projectId) }); } })}
+                  onClick={() => deletePhase.mutate({ id: phase.id }, {
+                    onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListPhasesQueryKey(projectId) }); queryClient.invalidateQueries({ queryKey: getListTasksQueryKey(projectId) }); },
+                    onError: () => { toast({ title: "Failed to delete phase", variant: "destructive" }); },
+                  })}
                 >
                   Delete
                 </AlertDialogAction>
@@ -646,6 +686,7 @@ function TaskModal({ open, onClose, projectId, phaseId, parentTaskId, editTask, 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const defaultPhaseId = phaseId ?? editTask?.phaseId ?? phases[0]?.id;
 
@@ -655,10 +696,11 @@ function TaskModal({ open, onClose, projectId, phaseId, parentTaskId, editTask, 
       taskType: editTask?.taskType ?? (parentTaskId ? "subtask" : "task"),
       plannedStart: editTask?.plannedStart ?? "",
       plannedEnd: editTask?.plannedEnd ?? "",
-      resourceId: editTask?.resourceId ? String(editTask.resourceId) : "",
+      resourceId: editTask?.resourceId ? String(editTask.resourceId) : "__none__",
       pctDone: editTask?.pctDone != null ? String(Math.round(editTask.pctDone)) : "0",
       status: editTask?.status ?? "Not Started",
       notes: editTask?.notes ?? "",
+      phaseId: String(defaultPhaseId ?? ""),
     },
   });
 
@@ -669,23 +711,29 @@ function TaskModal({ open, onClose, projectId, phaseId, parentTaskId, editTask, 
         taskType: editTask?.taskType ?? (parentTaskId ? "subtask" : "task"),
         plannedStart: editTask?.plannedStart ?? "",
         plannedEnd: editTask?.plannedEnd ?? "",
-        resourceId: editTask?.resourceId ? String(editTask.resourceId) : "",
+        resourceId: editTask?.resourceId ? String(editTask.resourceId) : "__none__",
         pctDone: editTask?.pctDone != null ? String(Math.round(editTask.pctDone)) : "0",
         status: editTask?.status ?? "Not Started",
         notes: editTask?.notes ?? "",
+        phaseId: String(defaultPhaseId ?? ""),
       });
     }
-  }, [open, editTask]);
+  }, [open, editTask, phaseId]);
 
   function onSubmit(data: TaskFormData) {
+    const resolvedPhaseId = data.phaseId ? parseInt(data.phaseId) : undefined;
+    if (!resolvedPhaseId) {
+      toast({ title: "Please select a phase", variant: "destructive" });
+      return;
+    }
     const payload = {
-      phaseId: defaultPhaseId!,
+      phaseId: resolvedPhaseId,
       taskType: data.taskType,
       description: data.description,
       parentTaskId: parentTaskId ?? editTask?.parentTaskId ?? undefined,
       plannedStart: data.plannedStart || undefined,
       plannedEnd: data.plannedEnd || undefined,
-      resourceId: data.resourceId ? parseInt(data.resourceId) : undefined,
+      resourceId: data.resourceId && data.resourceId !== "__none__" ? parseInt(data.resourceId) : undefined,
       pctDone: parseFloat(data.pctDone) || 0,
       status: data.status,
       notes: data.notes || undefined,
@@ -696,9 +744,15 @@ function TaskModal({ open, onClose, projectId, phaseId, parentTaskId, editTask, 
       onClose();
     };
     if (editTask) {
-      updateTask.mutate({ id: editTask.id, data: payload }, { onSuccess: invalidate });
+      updateTask.mutate({ id: editTask.id, data: payload }, {
+        onSuccess: invalidate,
+        onError: () => { toast({ title: "Failed to save task", variant: "destructive" }); },
+      });
     } else {
-      createTask.mutate({ projectId, data: payload }, { onSuccess: invalidate });
+      createTask.mutate({ projectId, data: payload }, {
+        onSuccess: invalidate,
+        onError: () => { toast({ title: "Failed to create task", variant: "destructive" }); },
+      });
     }
   }
 
@@ -716,7 +770,10 @@ function TaskModal({ open, onClose, projectId, phaseId, parentTaskId, editTask, 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium">Phase</label>
-              <Select value={String(defaultPhaseId ?? "")} onValueChange={() => {}}>
+              <Select
+                value={form.watch("phaseId")}
+                onValueChange={(v) => form.setValue("phaseId", v)}
+              >
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Phase" /></SelectTrigger>
                 <SelectContent>
                   {phases.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
@@ -751,7 +808,7 @@ function TaskModal({ open, onClose, projectId, phaseId, parentTaskId, editTask, 
               <Select value={form.watch("resourceId")} onValueChange={(v) => form.setValue("resourceId", v)}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Unassigned" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="__none__">Unassigned</SelectItem>
                   {resources.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -794,6 +851,7 @@ function ProjectHeader({ project, projectId }: {
 }) {
   const updateProject = useUpdateProject();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [editingName, setEditingName] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
   const [nameVal, setNameVal] = useState(project.name);
@@ -806,7 +864,10 @@ function ProjectHeader({ project, projectId }: {
     if (!nameVal.trim() || nameVal === project.name) { setEditingName(false); return; }
     updateProject.mutate(
       { id: projectId, data: { name: nameVal.trim() } },
-      { onSuccess: () => { setEditingName(false); queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(projectId) }); } }
+      {
+        onSuccess: () => { setEditingName(false); queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(projectId) }); },
+        onError: () => { toast({ title: "Failed to update project name", variant: "destructive" }); },
+      }
     );
   }
 
@@ -814,7 +875,10 @@ function ProjectHeader({ project, projectId }: {
     if (descVal === (project.description ?? "")) { setEditingDesc(false); return; }
     updateProject.mutate(
       { id: projectId, data: { description: descVal || undefined } },
-      { onSuccess: () => { setEditingDesc(false); queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(projectId) }); } }
+      {
+        onSuccess: () => { setEditingDesc(false); queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(projectId) }); },
+        onError: () => { toast({ title: "Failed to update project description", variant: "destructive" }); },
+      }
     );
   }
 
@@ -876,9 +940,11 @@ export default function ProjectDetailPage() {
   const section = params.section ?? "plan";
   const queryClient = useQueryClient();
 
-  const { data: project, isLoading: projectLoading } = useGetProject(projectId, { query: { enabled: !!projectId } });
-  const { data: phases = [], isLoading: phasesLoading } = useListPhases(projectId, { query: { enabled: !!projectId } });
-  const { data: tasks = [], isLoading: tasksLoading } = useListTasks(projectId, { query: { enabled: !!projectId } });
+  const { toast } = useToast();
+
+  const { data: project, isLoading: projectLoading } = useGetProject(projectId, { query: { enabled: !!projectId, queryKey: getGetProjectQueryKey(projectId) } });
+  const { data: phases = [], isLoading: phasesLoading } = useListPhases(projectId, { query: { enabled: !!projectId, queryKey: getListPhasesQueryKey(projectId) } });
+  const { data: tasks = [], isLoading: tasksLoading } = useListTasks(projectId, { query: { enabled: !!projectId, queryKey: getListTasksQueryKey(projectId) } });
   const { data: resources = [] } = useListResources();
   const createPhase = useCreatePhase();
 
@@ -911,6 +977,7 @@ export default function ProjectDetailPage() {
           setNewPhaseName("");
           setAddingPhase(false);
         },
+        onError: () => { toast({ title: "Failed to create phase", variant: "destructive" }); },
       }
     );
   }

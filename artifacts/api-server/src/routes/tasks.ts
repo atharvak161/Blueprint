@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
-import { db, tasksTable, resourcesTable } from "@workspace/db";
+import { eq, asc, and } from "drizzle-orm";
+import { db, tasksTable, resourcesTable, phasesTable } from "@workspace/db";
 import {
   ListTasksParams,
   CreateTaskParams,
@@ -77,19 +77,23 @@ router.post("/projects/:projectId/tasks/renumber", async (req, res): Promise<voi
     res.status(400).json({ error: "Invalid projectId" });
     return;
   }
-  const allTasks = await db
-    .select({ id: tasksTable.id })
-    .from(tasksTable)
-    .where(eq(tasksTable.projectId, projectId))
-    .orderBy(asc(tasksTable.sortOrder), asc(tasksTable.id));
+  let renumbered = 0;
+  await db.transaction(async (tx) => {
+    const allTasks = await tx
+      .select({ id: tasksTable.id })
+      .from(tasksTable)
+      .where(eq(tasksTable.projectId, projectId))
+      .orderBy(asc(tasksTable.sortOrder), asc(tasksTable.id));
 
-  for (let i = 0; i < allTasks.length; i++) {
-    await db
-      .update(tasksTable)
-      .set({ taskNumber: i + 1 })
-      .where(eq(tasksTable.id, allTasks[i].id));
-  }
-  res.json({ renumbered: allTasks.length });
+    for (let i = 0; i < allTasks.length; i++) {
+      await tx
+        .update(tasksTable)
+        .set({ taskNumber: i + 1 })
+        .where(eq(tasksTable.id, allTasks[i].id));
+    }
+    renumbered = allTasks.length;
+  });
+  res.json({ renumbered });
 });
 
 router.post("/projects/:projectId/tasks", async (req, res): Promise<void> => {
@@ -102,6 +106,18 @@ router.post("/projects/:projectId/tasks", async (req, res): Promise<void> => {
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
+  }
+
+  // Verify phaseId belongs to this project
+  if (parsed.data.phaseId !== undefined) {
+    const [phase] = await db
+      .select({ id: phasesTable.id })
+      .from(phasesTable)
+      .where(and(eq(phasesTable.id, parsed.data.phaseId), eq(phasesTable.projectId, params.data.projectId)));
+    if (!phase) {
+      res.status(400).json({ error: "phaseId does not belong to this project" });
+      return;
+    }
   }
 
   const existingTasks = await db
@@ -123,7 +139,7 @@ router.post("/projects/:projectId/tasks", async (req, res): Promise<void> => {
     pctDone: parsed.data.pctDone ?? 0,
     status: parsed.data.status ?? "Not Started",
     notes: parsed.data.notes ?? null,
-    sortOrder: parsed.data.sortOrder ?? maxNum,
+    sortOrder: parsed.data.sortOrder ?? maxNum + 1,
   }).returning();
 
   let resourceName: string | null = null;
@@ -158,7 +174,6 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
   if (parsed.data.status !== undefined) updates.status = parsed.data.status;
   if (parsed.data.notes !== undefined) updates.notes = parsed.data.notes;
   if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
-  if (parsed.data.taskNumber !== undefined) updates.taskNumber = parsed.data.taskNumber;
 
   const [task] = await db.update(tasksTable).set(updates).where(eq(tasksTable.id, params.data.id)).returning();
   if (!task) {
@@ -185,14 +200,19 @@ router.delete("/tasks/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const remaining = await db
-    .select({ id: tasksTable.id })
-    .from(tasksTable)
-    .where(eq(tasksTable.projectId, deleted.projectId))
-    .orderBy(asc(tasksTable.sortOrder), asc(tasksTable.id));
-  for (let i = 0; i < remaining.length; i++) {
-    await db.update(tasksTable).set({ taskNumber: i + 1 }).where(eq(tasksTable.id, remaining[i].id));
-  }
+  await db.transaction(async (tx) => {
+    const remaining = await tx
+      .select({ id: tasksTable.id })
+      .from(tasksTable)
+      .where(eq(tasksTable.projectId, deleted.projectId))
+      .orderBy(asc(tasksTable.sortOrder), asc(tasksTable.id));
+    for (let i = 0; i < remaining.length; i++) {
+      await tx
+        .update(tasksTable)
+        .set({ taskNumber: i + 1 })
+        .where(eq(tasksTable.id, remaining[i].id));
+    }
+  });
 
   res.sendStatus(204);
 });
