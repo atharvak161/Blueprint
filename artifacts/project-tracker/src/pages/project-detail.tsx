@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import {
   ChevronDown, ChevronRight, Plus, Trash2, Pencil, Check, X,
-  AlertCircle, Clock, TrendingUp, RefreshCw
+  AlertCircle, Clock, TrendingUp, RefreshCw, ArrowLeft
 } from "lucide-react";
 import {
   useGetProject,
@@ -1021,6 +1021,10 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <Link href="/projects" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group">
+        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+        Projects
+      </Link>
       <div className="flex items-start gap-3 mb-6">
         <ProjectHeader project={project} projectId={projectId} />
         {(project.startDate || project.endDate) && (
