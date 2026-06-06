@@ -30,6 +30,7 @@ function Router() {
     <AppLayout>
       <Switch>
         <Route path="/" component={ProjectsPage} />
+        <Route path="/projects" component={ProjectsPage} />
         <Route path="/projects/:id/:section" component={ProjectDetailPage} />
         <Route path="/projects/:id">
           {(params) => <Redirect to={`/projects/${params.id}/plan`} />}
