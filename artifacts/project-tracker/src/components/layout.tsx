@@ -34,7 +34,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
               <div className="w-3 h-3 bg-primary-foreground rotate-45" />
             </div>
-            <span className="font-semibold tracking-tight text-sidebar-foreground">ProgTrack</span>
+            <span className="font-semibold tracking-tight text-sidebar-foreground">Blueprint</span>
           </div>
         </div>
 

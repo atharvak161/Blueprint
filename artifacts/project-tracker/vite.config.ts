@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 const port = Number(process.env.PORT) || 3000;
-const basePath = process.env.BASE_PATH || (process.env.GITHUB_PAGES === 'true' ? '/Excel-Project-Hub/' : '/');
+const basePath = process.env.BASE_PATH || (process.env.GITHUB_PAGES === 'true' ? '/Blueprint/' : '/');
 
 export default defineConfig({
   base: basePath,
