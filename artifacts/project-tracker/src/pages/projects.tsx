@@ -126,7 +126,7 @@ export default function ProjectsPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+          <h1 className="text-2xl font-bold tracking-tight">All Projects</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {projects?.length ?? 0} project{projects?.length !== 1 ? "s" : ""}
           </p>

@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 
@@ -14,6 +15,9 @@ export default function NotFound() {
           <p className="mt-4 text-sm text-gray-600">
             Did you forget to add the page to the router?
           </p>
+          <Link href="/projects" className="text-primary text-sm mt-4 inline-block hover:underline">
+            All Projects
+          </Link>
         </CardContent>
       </Card>
     </div>

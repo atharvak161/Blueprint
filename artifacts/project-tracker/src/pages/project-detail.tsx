@@ -1016,7 +1016,7 @@ export default function ProjectDetailPage() {
       <div className="p-6 text-center">
         <AlertCircle className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
         <p className="text-muted-foreground">Project not found</p>
-        <Link href="/" className="text-primary text-sm mt-2 inline-block hover:underline">Back to projects</Link>
+        <Link href="/projects" className="text-primary text-sm mt-2 inline-block hover:underline">All Projects</Link>
       </div>
     );
   }
@@ -1028,7 +1028,7 @@ export default function ProjectDetailPage() {
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
         </button>
         <div className="flex items-center gap-1.5 text-sm">
-          <Link href="/projects" className="text-muted-foreground hover:text-foreground transition-colors">Projects</Link>
+          <Link href="/projects" className="text-muted-foreground hover:text-foreground transition-colors">All Projects</Link>
           <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50" />
           <span className="text-foreground font-medium truncate max-w-xs">{project.name}</span>
         </div>

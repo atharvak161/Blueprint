@@ -12,7 +12,7 @@ const REPORT_SECTIONS = [
 ];
 
 const GLOBAL_NAV = [
-  { href: "/",          label: "All Projects", icon: LayoutDashboard },
+  { href: "/projects",  label: "All Projects", icon: LayoutDashboard },
   { href: "/resources", label: "Resources",    icon: Users },
   { href: "/holidays",  label: "Holidays",     icon: Calendar },
 ];
@@ -106,7 +106,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               {GLOBAL_NAV.map((item) => {
                 const isActive =
                   location === item.href ||
-                  (item.href !== "/" && location.startsWith(item.href));
+                  (item.href === "/projects" && location === "/") ||
+                  (item.href !== "/projects" && location.startsWith(item.href));
                 return (
                   <Link
                     key={item.href}
