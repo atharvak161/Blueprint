@@ -99,3 +99,33 @@ To run locally:
 pnpm install
 pnpm --filter @workspace/project-tracker dev
 ```
+
+That runs the frontend against `localStorage`, which needs no configuration.
+
+### Running against a real database (optional)
+
+The API server needs a Postgres connection. `lib/db` throws on startup when
+`DATABASE_URL` is unset, so it will not boot without one:
+
+```bash
+cp .env.example .env
+# set DATABASE_URL in .env
+pnpm --filter @workspace/db push     # create the schema
+pnpm --filter @workspace/api dev     # start the API server
+```
+
+`.env.example` documents every variable the monorepo reads, including `PORT`,
+`API_PORT` (which the Vite dev proxy forwards to), and the `BASE_PATH` /
+`GITHUB_PAGES` pair used when building for Pages.
+
+### Project management workbook generator
+
+`generate_project_management.py` is a standalone Python script, unrelated to the
+web app. It generates an Excel workbook (`.xlsm`-compatible) for project
+management: 12+ collapsible phases, UK holiday-aware scheduling, VBA export
+macros, and its own embedded instructions.
+
+```bash
+pip install openpyxl
+python3 generate_project_management.py
+```
